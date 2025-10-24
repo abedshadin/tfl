@@ -1,0 +1,3 @@
+<h3 style="margin-top: 20px;">Other Clauses</h3>
+<div class="form-group-inline"><input type="checkbox" id="lc_tolerance_enabled" name="lc_tolerance_enabled" value="1" <?= !empty($invoice['lc_tolerance_enabled']) ? 'checked' : '' ?>><label for="lc_tolerance_enabled">Include L/C Tolerance Clause</label></div>
+<div class="form-group" id="tolerance-percentage-group" style="display: <?= !empty($invoice['lc_tolerance_enabled']) ? 'block' : 'none' ?>;"><label for="lc_tolerance_percentage">Tolerance Percentage (%)</label><input type="number" id="lc_tolerance_percentage" name="lc_tolerance_percentage" value="<?= htmlspecialchars($invoice['lc_tolerance_percentage'] ?? 10) ?>" style="width: 100px;"></div>
