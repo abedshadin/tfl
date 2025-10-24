@@ -35,10 +35,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lc_tolerance_percentage = (int)($_POST['lc_tolerance_percentage'] ?? 10);
         $cnf_agent_id = !empty($_POST['cnf_agent_id']) ? (int)$_POST['cnf_agent_id'] : null;
         
-        // --- UPDATED: Combine BOTH Ref Nos ---
+        // --- UPDATED: Combine BOTH Ref Nos (fixed $_POST usage) ---
         $reference_no = ($_POST['bank_ref_prefix'] ?? '') . ($_POST['bank_ref_suffix'] ?? '');
         $cnf_reference_no = ($_POST['cnf_ref_prefix'] ?? '') . ($_POST['cnf_ref_suffix'] ?? '');
-        
+
+        // --- NEW: read bank/cnf reference dates from form ---
+        $bank_ref_date = !empty($_POST['bank_ref_date']) ? $_POST['bank_ref_date'] : null;
+        $cnf_ref_date  = !empty($_POST['cnf_ref_date'])  ? $_POST['cnf_ref_date']  : null;
+
         $subject_line = $_POST['subject_line'] ?? null;
         $amount_in_words = $_POST['amount_in_words'] ?? null;
         $lc_date = !empty($_POST['lc_date']) ? $_POST['lc_date'] : null; 
@@ -50,84 +54,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Ensure bank_id is read from POST (so it will be updated in DB)
         $bank_id = isset($_POST['bank_id']) && $_POST['bank_id'] !== '' ? (int)$_POST['bank_id'] : 0;
-        
-        // Get POST data for checklist checkboxes
-        $chk_bill_of_exchange = isset($_POST['chk_bill_of_exchange']) ? 1 : 0;
-        $chk_packing_list = isset($_POST['chk_packing_list']) ? 1 : 0;
-        $chk_coo = isset($_POST['chk_coo']) ? 1 : 0;
-        $chk_health_cert = isset($_POST['chk_health_cert']) ? 1 : 0;
-        $chk_radioactivity_cert = isset($_POST['chk_radioactivity_cert']) ? 1 : 0;
-        $chk_lc_copy = isset($_POST['chk_lc_copy']) ? 1 : 0;
-        $chk_pi_copy = isset($_POST['chk_pi_copy']) ? 1 : 0;
-        $chk_insurance_cert = isset($_POST['chk_insurance_cert']) ? 1 : 0;
-        $chk_form_ga = isset($_POST['chk_form_ga']) ? 1 : 0;
-        $od_enabled = isset($_POST['od_enabled']) ? 1 : 0; // Renamed
-        $chk_others_cert_text = $_POST['chk_others_cert_text'] ?? null; // Renamed
-        $chk_noc = isset($_POST['chk_noc']) ? 1 : 0;
-        $chk_undertaking = isset($_POST['chk_undertaking']) ? 1 : 0;
-        $chk_declaration = isset($_POST['chk_declaration']) ? 1 : 0;
-        $chk_lca_cad = isset($_POST['chk_lca_cad']) ? 1 : 0;
 
-        // Update Invoice Details (REMOVED lcaf_number = ?,)
+        // (checklist variables already set above)
+
+        // Update Invoice Details (added bank_ref_date, cnf_ref_date)
         $sql_update_invoice = "UPDATE proforma_invoices SET
             pi_number = ?, pi_date = ?, lc_number = ?, freight_cost = ?,
             lc_tolerance_enabled = ?, lc_tolerance_percentage = ?, cnf_agent_id = ?, bank_id = ?,
-            reference_no = ?, cnf_reference_no = ?, subject_line = ?, amount_in_words = ?, lc_date = ?, commercial_invoice_no = ?, commercial_invoice_date = ?,
+            reference_no = ?, cnf_reference_no = ?, bank_ref_date = ?, cnf_ref_date = ?, subject_line = ?, amount_in_words = ?, lc_date = ?, commercial_invoice_no = ?, commercial_invoice_date = ?,
             bl_number = ?, bl_date = ?,
             chk_bill_of_exchange = ?, chk_packing_list = ?, chk_coo = ?, chk_health_cert = ?,
             chk_radioactivity_cert = ?, chk_lc_copy = ?, chk_pi_copy = ?, chk_insurance_cert = ?,
             chk_form_ga = ?, od_enabled = ?, chk_others_cert_text = ?, chk_noc = ?, chk_undertaking = ?,
             chk_declaration = ?, chk_lca_cad = ?,
-            document_status = ? 
-            WHERE id = ?"; // Total 32 placeholders
+            document_status = ?
+            WHERE id = ?";
+
         $stmt_invoice = $conn->prepare($sql_update_invoice);
         if(!$stmt_invoice) throw new Exception("Prepare failed (invoice): " . $conn->error);
 
-        // --- FIXED: exact 34-type string to match 34 parameters ---
+        // Prepare simple variables (bind_param requires variables)
+        $pi_number = $_POST['pi_number'] ?? '';
+        $pi_date = $_POST['pi_date'] ?? null;
+        $lc_number = $_POST['lc_number'] ?? '';
+        $freight_cost = isset($_POST['freight_cost']) ? (float)$_POST['freight_cost'] : 0.0;
+
+        // reuse/ensure variables for the rest (most already exist above)
+        // $lc_tolerance_enabled, $lc_tolerance_percentage, $cnf_agent_id, $bank_id
+        // $reference_no, $cnf_reference_no, $bank_ref_date, $cnf_ref_date
+        // $subject_line, $amount_in_words, $lc_date, $commercial_invoice_no, $commercial_invoice_date
+        // $bl_number, $bl_date
+        // $chk_bill_of_exchange ... $chk_lca_cad
+        // $document_status, $invoice_id
+
+        // Build exact 36-type string programmatically to avoid manual typo
+        $types = 'sssd' . 'iiii' . str_repeat('s', 11) . str_repeat('i', 10) . 's' . 'iiii' . 's' . 'i';
+        // Bind variables in same order as SQL placeholders
         $stmt_invoice->bind_param(
-            "sssdiiiisssssssssiiiiiiiiiisiiiisi",
-            $_POST['pi_number'],
-            $_POST['pi_date'],
-            $_POST['lc_number'],
-            $_POST['freight_cost'],
-            $lc_tolerance_enabled,
-            $lc_tolerance_percentage,
-            $cnf_agent_id,
-            $bank_id,
-            $reference_no,
-            $cnf_reference_no,
-            $subject_line,
-            $amount_in_words,
-            $lc_date,
-            $commercial_invoice_no,
-            $commercial_invoice_date,
-            $bl_number,
-            $bl_date,
-            $chk_bill_of_exchange,
-            $chk_packing_list,
-            $chk_coo,
-            $chk_health_cert,
-            $chk_radioactivity_cert,
-            $chk_lc_copy,
-            $chk_pi_copy,
-            $chk_insurance_cert,
-            $chk_form_ga,
-            $od_enabled,
-            $chk_others_cert_text,
-            $chk_noc,
-            $chk_undertaking,
-            $chk_declaration,
-            $chk_lca_cad,
-            $document_status,
-            $invoice_id
+            $types,
+            $pi_number,                 // 1
+            $pi_date,                   // 2
+            $lc_number,                 // 3
+            $freight_cost,              // 4
+            $lc_tolerance_enabled,      // 5
+            $lc_tolerance_percentage,   // 6
+            $cnf_agent_id,              // 7
+            $bank_id,                   // 8
+            $reference_no,              // 9
+            $cnf_reference_no,          //10
+            $bank_ref_date,             //11
+            $cnf_ref_date,              //12
+            $subject_line,              //13
+            $amount_in_words,           //14
+            $lc_date,                   //15
+            $commercial_invoice_no,     //16
+            $commercial_invoice_date,   //17
+            $bl_number,                 //18
+            $bl_date,                   //19
+            $chk_bill_of_exchange,      //20
+            $chk_packing_list,          //21
+            $chk_coo,                   //22
+            $chk_health_cert,           //23
+            $chk_radioactivity_cert,    //24
+            $chk_lc_copy,               //25
+            $chk_pi_copy,               //26
+            $chk_insurance_cert,        //27
+            $chk_form_ga,               //28
+            $od_enabled,                //29
+            $chk_others_cert_text,      //30
+            $chk_noc,                   //31
+            $chk_undertaking,           //32
+            $chk_declaration,           //33
+            $chk_lca_cad,               //34
+            $document_status,           //35
+            $invoice_id                 //36
         );
 
-        // --- END CORRECTION ---
-
-         if(!$stmt_invoice->execute()) { throw new Exception("Execute failed (invoice): " . $stmt_invoice->error); }
+        if (!$stmt_invoice->execute()) { throw new Exception("Execute failed (invoice): " . $stmt_invoice->error); }
         $stmt_invoice->close();
-        
-        // --- Product Insert/Update Logic (remains the same) ---
+
+        // --- DELETE existing products for this invoice ---
         $stmt_delete = $conn->prepare("DELETE FROM proforma_products WHERE invoice_id = ?");
         if($stmt_delete === false) { throw new Exception("Prepare failed (delete products): " . $conn->error); }
         $stmt_delete->bind_param("i", $invoice_id);

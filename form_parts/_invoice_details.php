@@ -60,3 +60,13 @@
     <div class="form-group"><label>B/L No.</label><input type="text" name="bl_number" value="<?= htmlspecialchars($invoice['bl_number'] ?? '') ?>"></div>
     <div class="form-group"><label>B/L Date</label><input type="date" name="bl_date" value="<?= htmlspecialchars($invoice['bl_date'] ?? '') ?>"></div>
 </div>
+<div class="form-row">
+    <div class="form-group">
+        <label>Bank Reference Date</label>
+        <input type="date" name="bank_ref_date" id="bank_ref_date" value="<?= htmlspecialchars($invoice['bank_ref_date'] ?? '') ?>">
+    </div>
+    <div class="form-group">
+        <label>C&F Reference Date</label>
+        <input type="date" name="cnf_ref_date" id="cnf_ref_date" value="<?= htmlspecialchars($invoice['cnf_ref_date'] ?? '') ?>">
+    </div>
+</div>
