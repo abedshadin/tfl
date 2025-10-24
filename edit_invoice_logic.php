@@ -83,45 +83,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt_invoice = $conn->prepare($sql_update_invoice);
         if(!$stmt_invoice) throw new Exception("Prepare failed (invoice): " . $conn->error);
 
-        // --- CORRECTED TYPE STRING (32 characters) ---
-       // Updated type string: 33 characters
-$stmt_invoice->bind_param(
-    "sssdiiiissssssssssiiiiiiiiiisiiiisi",
-    $_POST['pi_number'],
-    $_POST['pi_date'],
-    $_POST['lc_number'],
-    $_POST['freight_cost'],
-    $lc_tolerance_enabled,
-    $lc_tolerance_percentage,
-    $cnf_agent_id,
-    $bank_id,
-    $reference_no,
-    $cnf_reference_no,
-    $subject_line,
-    $amount_in_words,
-    $lc_date,
-    $commercial_invoice_no,
-    $commercial_invoice_date,
-    $bl_number,
-    $bl_date,
-    $chk_bill_of_exchange,
-    $chk_packing_list,
-    $chk_coo,
-    $chk_health_cert,
-    $chk_radioactivity_cert,
-    $chk_lc_copy,
-    $chk_pi_copy,
-    $chk_insurance_cert,
-    $chk_form_ga,
-    $od_enabled,
-    $chk_others_cert_text,
-    $chk_noc,
-    $chk_undertaking,
-    $chk_declaration,
-    $chk_lca_cad,
-    $document_status,
-    $invoice_id
-);
+        // --- FIXED: exact 34-type string to match 34 parameters ---
+        $stmt_invoice->bind_param(
+            "sssdiiiisssssssssiiiiiiiiiisiiiisi",
+            $_POST['pi_number'],
+            $_POST['pi_date'],
+            $_POST['lc_number'],
+            $_POST['freight_cost'],
+            $lc_tolerance_enabled,
+            $lc_tolerance_percentage,
+            $cnf_agent_id,
+            $bank_id,
+            $reference_no,
+            $cnf_reference_no,
+            $subject_line,
+            $amount_in_words,
+            $lc_date,
+            $commercial_invoice_no,
+            $commercial_invoice_date,
+            $bl_number,
+            $bl_date,
+            $chk_bill_of_exchange,
+            $chk_packing_list,
+            $chk_coo,
+            $chk_health_cert,
+            $chk_radioactivity_cert,
+            $chk_lc_copy,
+            $chk_pi_copy,
+            $chk_insurance_cert,
+            $chk_form_ga,
+            $od_enabled,
+            $chk_others_cert_text,
+            $chk_noc,
+            $chk_undertaking,
+            $chk_declaration,
+            $chk_lca_cad,
+            $document_status,
+            $invoice_id
+        );
 
         // --- END CORRECTION ---
 
@@ -155,11 +154,13 @@ $stmt_invoice->bind_param(
                     $hs_Code = $_POST['product_hs_code'][$key];
                     $vendor_id_hidden = (int)$_POST['vendor_id'];
 
-                    $stmt_insert_invoice_product->bind_param("isidsss", $invoice_id, $desc, $qty_to_save, $price, $unit, $net_weight, $hs_Code);
+                    // Corrected types: invoice_id (i), description (s), quantity (i), unit_price (d), unit (s), net_weight (d), hs_code (s)
+                    $stmt_insert_invoice_product->bind_param("isidsds", $invoice_id, $desc, $qty_to_save, $price, $unit, $net_weight, $hs_Code);
                      if(!$stmt_insert_invoice_product->execute()) {
                          throw new Exception("Execute failed (insert product loop): " . $stmt_insert_invoice_product->error . " | Invoice ID: " . $invoice_id);
                      }
-                    $stmt_upsert_vendor_product->bind_param("isddss", $vendor_id_hidden, $desc, $price, $unit, $net_weight, $hs_Code); 
+                    // Corrected types for upsert: vendor_id (i), description (s), default_unit_price (d), default_unit (s), default_net_weight (d), default_hs_code (s)
+                    $stmt_upsert_vendor_product->bind_param("isdsds", $vendor_id_hidden, $desc, $price, $unit, $net_weight, $hs_Code); 
                      if(!$stmt_upsert_vendor_product->execute()) { throw new Exception("Execute failed (upsert vendor product loop): " . $stmt_upsert_vendor_product->error); }
                 }
             }
